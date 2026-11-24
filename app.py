@@ -178,11 +178,19 @@ with aba_atividades:
                     f"Dificuldade: {atividade['dificuldade']}"
                 )
 
-                gerar = st.button(
-                    "✨ Gerar plano com IA",
-                    key=f"gerar_{atividade['id']}",
-                    type="primary"
-                )
+                
+                with st.container():
+                    gerar = st.button(
+                        "✨ Gerar plano com IA",
+                        key=f"gerar_{atividade['id']}",
+                        type="primary"
+                    )
+
+                    excluir = st.button(
+                        "🗑️ Excluir atividade",
+                        key=f"excluir_{atividade['id']}"
+                    )
+
 
                 if gerar:
 
@@ -227,6 +235,9 @@ with aba_atividades:
                             )
 
                             st.exception(erro)
+                
+                if excluir:
+                    st.warning("A exclusão será implementada na próxima etapa.")
 
 
     # ---------- Resultado recente ----------
