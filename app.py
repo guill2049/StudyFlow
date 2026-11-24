@@ -132,14 +132,18 @@ with aba_atividades:
 
         else:
 
-            db.criar_atividade(
-                nome,
-                descricao,
-                prazo.isoformat(),
-                dificuldade
-            )
+            try:
+                db.criar_atividade(
+                    nome,
+                    descricao,
+                    prazo.isoformat(),
+                    dificuldade
+                )
 
-            st.success("Atividade cadastrada com sucesso!")
+                st.success("Atividade cadastrada com sucesso!")
+
+            except ValueError as erro:
+                st.error(str(erro))
 
 
 
