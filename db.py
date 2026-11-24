@@ -2,6 +2,7 @@
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
+from datetime import date, datetime
 
 DB_PATH = Path(__file__).parent / "studyflow.db"
 DIFICULDADES = ("Fácil", "Média", "Difícil")
@@ -49,12 +50,56 @@ def inicializar():
 # ---------- Atividades (RF01, RF02) ----------
 
 def criar_atividade(nome: str, descricao: str, prazo: str, dificuldade: str) -> int:
+    # ---------- Validação dos campos ----------
+
+    nome = nome.strip()
+    descricao = descricao.strip()
+
+    if not nome and not descricao:
+        raise ValueError("Preencha os campos de nome e descrição.")
+
+    if not nome:
+        raise ValueError("O nome da atividade é obrigatório.")
+
+    if not descricao:
+        raise ValueError("A descrição da atividade é obrigatória.")
+
+    if len(nome) < 3:
+        raise ValueError("O nome deve possuir pelo menos 3 caracteres.")
+
+    if len(nome) > 80:
+        raise ValueError("O nome não pode ultrapassar 80 caracteres.")
+
+    if len(descricao) < 10:
+        raise ValueError("A descrição deve possuir pelo menos 10 caracteres.")
+
+    if len(descricao) > 1000:
+        raise ValueError("A descrição não pode ultrapassar 1000 caracteres.")
+
+    # ---------- Validação do prazo ----------
+
+    try:
+        prazo_validade = date.fromisoformat(prazo)
+    except (ValueError, TypeError):
+        raise ValueError("O prazo informado é inválido.")
+
+    if prazo_validade < date.today():
+        raise ValueError("O prazo não pode ser anterior à data atual.")
+
+    # ---------- Validação da dificuldade ----------
+
+    if dificuldade not in DIFICULDADES:
+        raise ValueError("A dificuldade informada é inválida.")
+
+    # ---------- Inserção no banco ----------
+
     with conectar() as conn:
         cur = conn.execute(
             "INSERT INTO atividades (nome, descricao, prazo, dificuldade) "
             "VALUES (?, ?, ?, ?)",
-            (nome.strip(), descricao.strip(), prazo, dificuldade),
+            (nome, descricao, prazo, dificuldade),
         )
+
         return cur.lastrowid
 
 
