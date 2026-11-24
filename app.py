@@ -112,9 +112,14 @@ with aba_atividades:
 
     if enviado:
 
-        if not nome.strip() or not descricao.strip():
+        nome = nome.strip()
+        descricao = descricao.strip()
 
-            st.error("Informe o nome e a descrição.")
+        if len(nome) < 3:
+            st.error("O nome deve possuir pelo menos 3 caracteres.")
+
+        elif len(descricao) < 10:
+            st.error("A descrição deve possuir pelo menos 10 caracteres.")
 
         else:
 
