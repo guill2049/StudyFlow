@@ -83,11 +83,12 @@ with aba_atividades:
 
     with st.form("form_atividade", clear_on_submit=True):
 
-        nome = st.text_input("Nome da atividade")
+        nome = st.text_input("Nome da atividade", max_chars=80)
 
         descricao = st.text_area(
             "Descrição",
-            height=120
+            height=120,
+            max_chars=1000
         )
 
         col1, col2 = st.columns(2)
