@@ -45,8 +45,8 @@ class Etapa(BaseModel):
 class Plano(BaseModel):
     analise: str
     prioridade: Literal["Baixa", "Média", "Alta"]
-    etapas: list[Etapa] = Field(min_length=2)
-    recomendacoes: list[str]
+    etapas: list[Etapa] = Field(min_length=3, max_length=8)
+    recomendacoes: list[str] = Field(min_length=2, max_length=4)
 
     @property
     def tempo_total_min(self) -> int:
