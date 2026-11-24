@@ -1,0 +1,4 @@
+.env
+studyflow.db
+.venv/
+__pycache__/
