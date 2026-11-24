@@ -115,7 +115,16 @@ with aba_atividades:
         nome = nome.strip()
         descricao = descricao.strip()
 
-        if len(nome) < 3:
+        if not nome and not descricao:
+            st.error("Preencha os campos de nome e descrição.")
+
+        elif not nome:
+            st.error("Preencha o campo de nome.")
+
+        elif not descricao:
+            st.error("Preencha o campo de descrição.")
+
+        elif len(nome) < 3:
             st.error("O nome deve possuir pelo menos 3 caracteres.")
 
         elif len(descricao) < 10:
@@ -131,6 +140,7 @@ with aba_atividades:
             )
 
             st.success("Atividade cadastrada com sucesso!")
+
 
 
     # ---------- Listagem ----------
