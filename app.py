@@ -178,6 +178,9 @@ with aba_atividades:
                     f"Dificuldade: {atividade['dificuldade']}"
                 )
 
+                confirmar_exclusao = (
+                    st.session_state.get("confirmar_exclusao") == atividade["id"]
+                )
                 
                 with st.container():
                     gerar = st.button(
@@ -186,11 +189,33 @@ with aba_atividades:
                         type="primary"
                     )
 
-                    excluir = st.button(
-                        "🗑️ Excluir atividade",
-                        key=f"excluir_{atividade['id']}"
-                    )
+                    if not confirmar_exclusao:
+                        excluir = st.button(
+                            "🗑️ Excluir atividade",
+                            key=f"excluir_{atividade['id']}"
+                        )
 
+                        confirmar = False
+                        cancelar = False
+
+                    else:
+                        st.warning(
+                            "Tem certeza de que deseja excluir esta atividade? "
+                            "Os planos associados também serão apagados."
+                        )
+
+                        confirmar = st.button(
+                            "Sim, excluir",
+                            key=f"confirmar_{atividade['id']}",
+                            type="primary"
+                        )
+
+                        cancelar = st.button(
+                            "Cancelar",
+                            key=f"cancelar_{atividade['id']}"
+                        )
+
+                        excluir = False
 
                 if gerar:
 
@@ -236,7 +261,16 @@ with aba_atividades:
 
                             st.exception(erro)
                 
+                
                 if excluir:
+                    st.session_state["confirmar_exclusao"] = atividade["id"]
+                    st.rerun()
+
+                if cancelar:
+                    del st.session_state["confirmar_exclusao"]
+                    st.rerun()
+
+                if confirmar:
                     removida = db.excluir_atividade(atividade["id"])
 
                     if removida:
@@ -244,11 +278,15 @@ with aba_atividades:
 
                         if plano_atual and plano_atual["atividade"] == atividade["nome"]:
                             del st.session_state["plano_atual"]
-                            
-                            st.toast("Atividade excluída com sucesso!")
-                            st.rerun()
+
+                        del st.session_state["confirmar_exclusao"]
+
+                        st.toast("Atividade excluída com sucesso!")
+                        st.rerun()
                     else:
-                        st.warning("Não foi possível encontrar essat atividade.")
+                        del st.session_state["confirmar_exclusao"]
+                        st.warning("Não foi possível encontrar essa atividade.")
+
 
 
     # ---------- Resultado recente ----------
