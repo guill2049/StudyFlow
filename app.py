@@ -240,8 +240,13 @@ with aba_atividades:
                     removida = db.excluir_atividade(atividade["id"])
 
                     if removida:
-                        st.toast("Atividade excluída com sucesso!")
-                        st.rerun()
+                        plano_atual = st.session_state.get("plano_atual")
+
+                        if plano_atual and plano_atual["atividade"] == atividade["nome"]:
+                            del st.session_state["plano_atual"]
+                            
+                            st.toast("Atividade excluída com sucesso!")
+                            st.rerun()
                     else:
                         st.warning("Não foi possível encontrar essat atividade.")
 
