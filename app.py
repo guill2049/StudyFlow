@@ -587,6 +587,10 @@ with st.sidebar:
 def pagina_painel():
 
     atividades = db.listar_atividades()
+
+    if st.session_state.pop("mensagem_plano_gerado", False):
+        alerta("ok", "Plano gerado e salvo com sucesso!")
+
     planos = db.listar_planos()
     hoje = date.today()
 
@@ -933,11 +937,14 @@ def pagina_atividades():
 
                     col_gerar, col_excluir, _ = st.columns([1.5, 1.2, 3])
 
+                    tem_plano = db.atividade_tem_plano(atividade["id"])
+
                     gerar = col_gerar.button(
-                        "Gerar plano com IA",
+                        label="Plano já gerado" if tem_plano else "Gerar plano com IA",
                         icon=":material/auto_awesome:",
                         key=f"gerar_{atividade['id']}",
-                        type="primary"
+                        type="primary",
+                        disabled=tem_plano
                     )
 
                     excluir = col_excluir.button(
@@ -976,6 +983,9 @@ def pagina_atividades():
                 # ---------- Geração do plano ----------
 
                 if gerar:
+                    if db.atividade_tem_plano(atividade["id"]):
+                        st.session_state["atividade_com_plano"] = atividade["id"]
+                        st.rerun()
 
                     with st.spinner(
                         "A inteligência artificial está "
@@ -1002,9 +1012,9 @@ def pagina_atividades():
                                 "modelo": modelo
                             }
 
-                            alerta("ok", 
-                                "Plano gerado e salvo com sucesso!"
-                            )
+                            st.session_state["mensagem_plano_gerado"] = True
+
+                            st.rerun()
 
                         except ErroIA as erro:
 

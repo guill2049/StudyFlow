@@ -151,3 +151,18 @@ def listar_planos() -> list[dict]:
             """
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+def atividade_tem_plano(atividade_id: int) -> bool:
+    with conectar() as conn:
+        resultado = conn.execute(
+            """
+            SELECT 1
+            FROM planos
+            WHERE atividade_id = ?
+            LIMIT 1
+            """,
+            (atividade_id,)
+        ).fetchone()
+
+    return resultado is not None
