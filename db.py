@@ -118,6 +118,15 @@ def obter_atividade(atividade_id: int) -> dict | None:
         ).fetchone()
     return dict(row) if row else None
 
+def excluir_atividade(atividade_id: int) -> bool:
+    with conectar() as conn:
+        cur = conn.execute(
+            "DELETE FROM atividades WHERE id = ?",
+            (atividade_id,)
+        )
+
+        return cur.rowcount > 0
+
 
 # ---------- Planos (RF05, RF06) ----------
 
