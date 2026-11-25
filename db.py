@@ -20,6 +20,13 @@ def conectar():
         conn.close()
 
 
+def _migrar(conn):
+    """Adiciona colunas novas em bancos criados por versões anteriores."""
+    colunas = {r["name"] for r in conn.execute("PRAGMA table_info(atividades)")}
+    if "concluida_em" not in colunas:
+        conn.execute("ALTER TABLE atividades ADD COLUMN concluida_em TEXT")
+
+
 def inicializar():
     """Cria as tabelas caso ainda não existam."""
     with conectar() as conn:
@@ -32,7 +39,8 @@ def inicializar():
                 prazo TEXT NOT NULL,
                 dificuldade TEXT NOT NULL
                     CHECK (dificuldade IN ('Fácil', 'Média', 'Difícil')),
-                criada_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+                criada_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+                concluida_em TEXT
             );
 
             CREATE TABLE IF NOT EXISTS planos (
@@ -45,6 +53,7 @@ def inicializar():
             );
             """
         )
+        _migrar(conn)
 
 
 # ---------- Atividades (RF01, RF02) ----------
@@ -106,7 +115,8 @@ def criar_atividade(nome: str, descricao: str, prazo: str, dificuldade: str) -> 
 def listar_atividades() -> list[dict]:
     with conectar() as conn:
         rows = conn.execute(
-            "SELECT * FROM atividades ORDER BY prazo ASC, id DESC"
+            "SELECT * FROM atividades "
+            "ORDER BY concluida_em IS NOT NULL, prazo ASC, id DESC"
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -118,6 +128,7 @@ def obter_atividade(atividade_id: int) -> dict | None:
         ).fetchone()
     return dict(row) if row else None
 
+
 def excluir_atividade(atividade_id: int) -> bool:
     with conectar() as conn:
         cur = conn.execute(
@@ -125,6 +136,26 @@ def excluir_atividade(atividade_id: int) -> bool:
             (atividade_id,)
         )
 
+        return cur.rowcount > 0
+
+
+def concluir_atividade(atividade_id: int) -> bool:
+    with conectar() as conn:
+        cur = conn.execute(
+            "UPDATE atividades SET concluida_em = datetime('now', 'localtime') "
+            "WHERE id = ? AND concluida_em IS NULL",
+            (atividade_id,),
+        )
+        return cur.rowcount > 0
+
+
+def reabrir_atividade(atividade_id: int) -> bool:
+    with conectar() as conn:
+        cur = conn.execute(
+            "UPDATE atividades SET concluida_em = NULL "
+            "WHERE id = ? AND concluida_em IS NOT NULL",
+            (atividade_id,),
+        )
         return cur.rowcount > 0
 
 

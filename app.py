@@ -34,6 +34,7 @@ ICONES = {
     "alert": '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
     "info": '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
     "check": '<polyline points="20 6 9 17 4 12"/>',
+    "check-circle": '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
 }
 
 
@@ -183,6 +184,8 @@ h1, h2, h3, h4 { color: var(--sf-ink); letter-spacing: -0.02em; }
 .sf-due { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: var(--sf-muted); }
 .sf-due-hot { color: var(--sf-hot); }
 .sf-due-warn { color: var(--sf-warn); }
+.sf-due-ok { color: var(--sf-ok); }
+.sf-act-title-done { color: var(--sf-muted); text-decoration: line-through; text-decoration-color: var(--sf-accent); }
 
 .sf-act-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .sf-act-title { font-weight: 700; font-size: 1.12rem; color: var(--sf-ink); margin: 8px 0 4px; }
@@ -442,6 +445,25 @@ def linha_prazo(data) -> str:
     )
 
 
+def linha_conclusao(atividade: dict, prazo) -> str:
+    """HTML da linha de conclusão, comparando a data com o prazo."""
+    momento = parse_datahora(atividade["concluida_em"])
+    if not momento:
+        return linha_prazo(prazo)
+
+    if prazo and momento.date() < prazo:
+        texto, classe = "antes do prazo", "sf-due-ok"
+    elif prazo and momento.date() > prazo:
+        texto, classe = "com atraso", "sf-due-warn"
+    else:
+        texto, classe = "no prazo", "sf-due-ok"
+
+    return (
+        f'<div class="sf-due {classe}">{svg("check-circle", 15)}'
+        f'Concluída em {momento.strftime("%d/%m/%Y")} · {texto}</div>'
+    )
+
+
 def classe_dificuldade(nome) -> str:
     n = str(nome).lower()
     if n.startswith(("fác", "fac")):
@@ -595,8 +617,13 @@ def pagina_painel():
     hoje = date.today()
 
     nomes_com_plano = {p["atividade"] for p in planos}
+
+    # Concluídas não entram em prazos, destaques nem agenda
+    pendentes = [a for a in atividades if not a["concluida_em"]]
+    concluidas = len(atividades) - len(pendentes)
+
     itens = sorted(
-        ((a, parse_data(a["prazo"])) for a in atividades),
+        ((a, parse_data(a["prazo"])) for a in pendentes),
         key=lambda par: par[1] or date.max,
     )
 
@@ -641,7 +668,7 @@ def pagina_painel():
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-        card_indicador("list", len(atividades), "Atividades")
+        card_indicador("check-circle", f"{concluidas}/{len(atividades)}", "Concluídas")
     with c2:
         card_indicador("sparkles", len(planos), "Planos gerados")
     with c3:
@@ -679,7 +706,12 @@ def pagina_painel():
         render('<div class="sf-card-sub">As atividades que vencem primeiro.</div>')
 
         destaque = itens[:3]
-        colunas = st.columns(len(destaque))
+
+        if not destaque:
+            alerta("ok", "Tudo em dia: nenhuma atividade pendente.")
+            colunas = []
+        else:
+            colunas = st.columns(len(destaque))
 
         for coluna, (atividade, prazo) in zip(colunas, destaque):
             status = (
@@ -905,6 +937,7 @@ def pagina_atividades():
         for atividade in atividades:
 
             prazo_data = parse_data(atividade["prazo"])
+            concluida = bool(atividade["concluida_em"])
 
             status = (
                 tag("Plano gerado", "ok", "check")
@@ -912,17 +945,20 @@ def pagina_atividades():
                 else tag("Sem plano", "neutral")
             )
 
+            tag_conclusao = tag("Concluída", "ok", "check") if concluida else ""
+
             with card(f"atividade-{atividade['id']}"):
 
                 render(f"""
                     <div class="sf-act-head">
                         <div class="sf-tags">
                             {tag(atividade["dificuldade"], classe_dificuldade(atividade["dificuldade"]))}
+                            {tag_conclusao}
                             {status}
                         </div>
-                        {linha_prazo(prazo_data)}
+                        {linha_conclusao(atividade, prazo_data) if concluida else linha_prazo(prazo_data)}
                     </div>
-                    <div class="sf-act-title">{h(atividade["nome"])}</div>
+                    <div class="sf-act-title {'sf-act-title-done' if concluida else ''}">{h(atividade["nome"])}</div>
                     <div class="sf-act-desc">{h(atividade["descricao"])}</div>
                 """)
 
@@ -935,7 +971,7 @@ def pagina_atividades():
 
                 if not confirmar_exclusao:
 
-                    col_gerar, col_excluir, _ = st.columns([1.5, 1.2, 3])
+                    col_gerar, col_concluir, col_excluir, _ = st.columns([1.5, 1.3, 1.2, 1.7])
 
                     tem_plano = db.atividade_tem_plano(atividade["id"])
 
@@ -944,7 +980,13 @@ def pagina_atividades():
                         icon=":material/auto_awesome:",
                         key=f"gerar_{atividade['id']}",
                         type="primary",
-                        disabled=tem_plano
+                        disabled=tem_plano or concluida
+                    )
+
+                    alternar_conclusao = col_concluir.button(
+                        "Reabrir" if concluida else "Concluir",
+                        icon=":material/undo:" if concluida else ":material/check_circle:",
+                        key=f"concluir_{atividade['id']}"
                     )
 
                     excluir = col_excluir.button(
@@ -978,6 +1020,7 @@ def pagina_atividades():
                     )
 
                     gerar = False
+                    alternar_conclusao = False
                     excluir = False
 
                 # ---------- Geração do plano ----------
@@ -1028,6 +1071,19 @@ def pagina_atividades():
                             )
 
                             st.exception(erro)
+
+                # ---------- Conclusão ----------
+
+                if alternar_conclusao:
+
+                    if concluida:
+                        db.reabrir_atividade(atividade["id"])
+                        st.toast("Atividade reaberta.")
+                    else:
+                        db.concluir_atividade(atividade["id"])
+                        st.toast("Atividade concluída. Bom trabalho!")
+
+                    st.rerun()
 
                 # ---------- Exclusão ----------
 
