@@ -237,7 +237,13 @@ with aba_atividades:
                             st.exception(erro)
                 
                 if excluir:
-                    st.warning("A exclusão será implementada na próxima etapa.")
+                    removida = db.excluir_atividade(atividade["id"])
+
+                    if removida:
+                        st.toast("Atividade excluída com sucesso!")
+                        st.rerun()
+                    else:
+                        st.warning("Não foi possível encontrar essat atividade.")
 
 
     # ---------- Resultado recente ----------
